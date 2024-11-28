@@ -22,7 +22,7 @@ func Postgres(ctx context.Context) (*postgres, error) {
 	addr := os.Getenv("POSTGRES_HOST")
 	var postgresContainer testcontainers.Container
 
-	if addr != "" {
+	if addr == "" {
 		req := testcontainers.ContainerRequest{
 			Image:        "postgres:13.15-alpine",
 			ExposedPorts: []string{"5432/tcp"},
