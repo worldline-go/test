@@ -7,7 +7,10 @@ import (
 	"testing"
 )
 
-func Main(m *testing.M, fn func(ctx context.Context) error, opts ...Option) {
+// Main is a wrapper around testing.M.Run that allows for setup and teardown with function.
+//   - function before to run and return a defer function and error. Defer for cleanup after the tests.
+//   - return nil in the function if doesn't have any cleanup.
+func Main(m *testing.M, fn func(ctx context.Context) (func(), error), opts ...Option) {
 	exitCode := 0
 	defer func() {
 		os.Exit(exitCode)
@@ -15,10 +18,15 @@ func Main(m *testing.M, fn func(ctx context.Context) error, opts ...Option) {
 
 	opt := apply(opts)
 
-	if err := fn(opt.ctx); err != nil {
+	deferFn, err := fn(opt.ctx)
+	if err != nil {
 		log.Println(err.Error())
 		exitCode = 1
 		return
+	}
+
+	if deferFn != nil {
+		defer deferFn()
 	}
 
 	exitCode = m.Run()
@@ -50,6 +58,7 @@ func apply(opts []Option) *option {
 }
 
 // WithContext sets the context for the main function.
+//   - default is context.Background()
 func WithContext(ctx context.Context) Option {
 	return func(o *option) {
 		o.ctx = ctx
