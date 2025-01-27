@@ -1,6 +1,6 @@
 # test 🧪
 
-Testing database queries we should initialize a test database and put some data in it and try to run our process to see if it is working as expected.
+Testing with using real servers and databases with test containers.
 
 ```sh
 go get github.com/worldline-go/test
@@ -8,7 +8,7 @@ go get github.com/worldline-go/test
 
 ## PostgreSQL
 
-You need to have a running PostgreSQL database to run the tests. To do that run it in the package level test main function.
+Need to have a running PostgreSQL database to run the tests. To do that run it in the package level test main function.
 
 Our test package has `Main` function it will run the given function and accept a defer function for cleanup.
 
