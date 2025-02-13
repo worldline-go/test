@@ -3,7 +3,6 @@ package testdb
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"os"
 	"path"
 	"strconv"
@@ -13,7 +12,6 @@ import (
 
 type Database struct {
 	DB *sql.DB
-	T  *testing.T
 
 	// schema counter
 	schemaCounter int32
@@ -22,7 +20,6 @@ type Database struct {
 func NewDatabase(t *testing.T, db *sql.DB) *Database {
 	return &Database{
 		DB: db,
-		T:  t,
 	}
 }
 
@@ -32,43 +29,43 @@ func (db *Database) NameGen(prefix string) string {
 	return prefix + "_" + strconv.Itoa(int(db.schemaCounter))
 }
 
-func (db *Database) SetSchema(schema string, opts ...OptionContext) error {
+func (db *Database) SetSchema(t *testing.T, schema string, opts ...OptionContext) {
 	opt := apply(opts)
 	schema = trim(schema)
 
-	db.T.Helper()
-	db.T.Logf("set schema to %s", schema)
+	t.Helper()
+	t.Logf("set schema to %s", schema)
 
 	_, err := db.DB.ExecContext(opt.Ctx, "SET search_path TO "+schema)
-	return err
+	t.Fatalf("could not set schema to %s: %v", schema, err)
 }
 
-func (db *Database) CreateSchema(schema string, opts ...OptionContext) error {
+func (db *Database) CreateSchema(t *testing.T, schema string, opts ...OptionContext) {
 	opt := apply(opts)
 	schema = trim(schema)
 
-	db.T.Helper()
-	db.T.Logf("create schema %s", schema)
+	t.Helper()
+	t.Logf("create schema %s", schema)
 
 	_, err := db.DB.ExecContext(opt.Ctx, "CREATE SCHEMA "+schema)
-	return err
+	t.Fatalf("could not create schema %s: %v", schema, err)
 }
 
-func (db *Database) DropSchema(schema string, opts ...OptionContext) error {
+func (db *Database) DropSchema(t *testing.T, schema string, opts ...OptionContext) {
 	opt := apply(opts)
 	schema = trim(schema)
 
-	db.T.Helper()
-	db.T.Logf("drop schema %s", schema)
+	t.Helper()
+	t.Logf("drop schema %s", schema)
 
 	_, err := db.DB.ExecContext(opt.Ctx, "DROP SCHEMA IF EXISTS "+schema+" CASCADE")
-	return err
+	t.Fatalf("could not drop schema %s: %v", schema, err)
 }
 
-func (db *Database) ExecuteFolder(folder string, opts ...OptionExec) error {
+func (db *Database) ExecuteFolder(t *testing.T, folder string, opts ...OptionExec) {
 	dirEntry, err := os.ReadDir(folder)
 	if err != nil {
-		return fmt.Errorf("could not read folder %s: %w", folder, err)
+		t.Fatalf("could not read folder %s: %v", folder, err)
 	}
 
 	var files []string
@@ -80,19 +77,19 @@ func (db *Database) ExecuteFolder(folder string, opts ...OptionExec) error {
 		files = append(files, path.Join(folder, file.Name()))
 	}
 
-	return db.ExecuteFiles(files, opts...)
+	db.ExecuteFiles(t, files, opts...)
 }
 
-func (db *Database) ExecuteFiles(files []string, opts ...OptionExec) error {
+func (db *Database) ExecuteFiles(t *testing.T, files []string, opts ...OptionExec) {
 	opt := apply(opts)
-	db.T.Helper()
+	t.Helper()
 
 	for _, file := range files {
-		db.T.Logf("execute file %s", file)
+		t.Logf("execute file %s", file)
 
 		content, err := os.ReadFile(file)
 		if err != nil {
-			return fmt.Errorf("could not read file %s: %w", file, err)
+			t.Fatalf("could not read file %s: %v", file, err)
 		}
 
 		contentStr := string(content)
@@ -110,9 +107,7 @@ func (db *Database) ExecuteFiles(files []string, opts ...OptionExec) error {
 		}
 
 		if _, err = db.DB.ExecContext(ctx, contentStr); err != nil {
-			return err
+			t.Fatalf("could not execute file %s: %v", file, err)
 		}
 	}
-
-	return nil
 }

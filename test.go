@@ -1,8 +1,6 @@
 package test
 
 import (
-	"context"
-	"log"
 	"os"
 	"testing"
 )
@@ -10,20 +8,13 @@ import (
 // Main is a wrapper around testing.M.Run that allows for setup and teardown with function.
 //   - function before to run and return a defer function and error. Defer for cleanup after the tests.
 //   - return nil in the function if doesn't have any cleanup.
-func Main(m *testing.M, fn func(ctx context.Context) (func(), error), opts ...Option) {
+func Main(m *testing.M, fn func() func(), opts ...Option) {
 	exitCode := 0
 	defer func() {
 		os.Exit(exitCode)
 	}()
 
-	opt := apply(opts)
-
-	deferFn, err := fn(opt.ctx)
-	if err != nil {
-		log.Println(err.Error())
-		exitCode = 1
-		return
-	}
+	deferFn := fn()
 
 	if deferFn != nil {
 		defer deferFn()
@@ -36,15 +27,9 @@ func Main(m *testing.M, fn func(ctx context.Context) (func(), error), opts ...Op
 
 type Option func(*option)
 
-type option struct {
-	ctx context.Context
-}
+type option struct{}
 
-func (o *option) Default() {
-	if o.ctx == nil {
-		o.ctx = context.Background()
-	}
-}
+func (o *option) Default() {}
 
 func apply(opts []Option) *option {
 	opt := new(option)
@@ -55,12 +40,4 @@ func apply(opts []Option) *option {
 	opt.Default()
 
 	return opt
-}
-
-// WithContext sets the context for the main function.
-//   - default is context.Background()
-func WithContext(ctx context.Context) Option {
-	return func(o *option) {
-		o.ctx = ctx
-	}
 }
