@@ -52,7 +52,7 @@ func Postgres(t *testing.T) *PostgresContainer {
 
 	if addr == "" {
 		req := testcontainers.ContainerRequest{
-			Image:        "postgres:13.15-alpine",
+			Image:        "docker.io/postgres:13.15-alpine",
 			ExposedPorts: []string{"5432/tcp"},
 			Env: map[string]string{
 				"POSTGRES_HOST_AUTH_METHOD": "trust",
