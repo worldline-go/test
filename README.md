@@ -12,6 +12,8 @@ Need to have a running PostgreSQL database to run the tests. To do that run it i
 
 Our test package has `Main` function it will run the given function and accept a defer function for cleanup.
 
+Default using `POSTGRES_TEST_IMAGE=docker.io/postgres:13.15-alpine` environment variable for the PostgreSQL image.
+
 ```go
 package container_test
 

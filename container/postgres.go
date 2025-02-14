@@ -51,8 +51,13 @@ func Postgres(t *testing.T) *PostgresContainer {
 	var postgresContainer testcontainers.Container
 
 	if addr == "" {
+		image := "docker.io/postgres:13.15-alpine"
+		if v := os.Getenv("POSTGRES_TEST_IMAGE"); v != "" {
+			image = v
+		}
+
 		req := testcontainers.ContainerRequest{
-			Image:        "docker.io/postgres:13.15-alpine",
+			Image:        image,
 			ExposedPorts: []string{"5432/tcp"},
 			Env: map[string]string{
 				"POSTGRES_HOST_AUTH_METHOD": "trust",
