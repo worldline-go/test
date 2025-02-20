@@ -52,7 +52,7 @@ func Postgres(t *testing.T) *PostgresContainer {
 
 	if addr == "" {
 		image := "docker.io/postgres:13.15-alpine"
-		if v := os.Getenv("POSTGRES_TEST_IMAGE"); v != "" {
+		if v := os.Getenv("TEST_IMAGE_POSTGRES"); v != "" {
 			image = v
 		}
 
