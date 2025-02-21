@@ -9,11 +9,11 @@ import (
 
 type RedisSuite struct {
 	suite.Suite
-	container *container.PostgresContainer
+	container *container.RedisContainer
 }
 
 func (s *RedisSuite) SetupSuite() {
-	s.container = container.Postgres(s.T())
+	s.container = container.Redis(s.T())
 }
 
 func TestExampleTestSuiteRedis(t *testing.T) {
