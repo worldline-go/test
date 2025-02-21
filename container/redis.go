@@ -30,7 +30,7 @@ func (p *RedisContainer) Stop(t *testing.T) {
 func Redis(t *testing.T) *RedisContainer {
 	t.Helper()
 
-	image := DefaultPostgresImage
+	image := DefaultRedisImage
 	if v := os.Getenv("TEST_IMAGE_REDIS"); v != "" {
 		image = v
 	}
