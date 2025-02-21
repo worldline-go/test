@@ -16,6 +16,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+var DefaultPostgresImage = "docker.io/postgres:13.15-alpine"
+
 type PostgresContainer struct {
 	container testcontainers.Container
 	*testdb.Database
@@ -47,11 +49,13 @@ func (p *PostgresContainer) DSN() string {
 }
 
 func Postgres(t *testing.T) *PostgresContainer {
+	t.Helper()
+
 	addr := os.Getenv("POSTGRES_HOST")
 	var postgresContainer testcontainers.Container
 
 	if addr == "" {
-		image := "docker.io/postgres:13.15-alpine"
+		image := DefaultPostgresImage
 		if v := os.Getenv("TEST_IMAGE_POSTGRES"); v != "" {
 			image = v
 		}

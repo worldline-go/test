@@ -17,7 +17,7 @@ func (s *PostgresSuite) SetupSuite() {
 	s.container = container.Postgres(s.T())
 }
 
-func TestExampleTestSuite(t *testing.T) {
+func TestExampleTestSuitePostgres(t *testing.T) {
 	suite.Run(t, new(PostgresSuite))
 }
 
