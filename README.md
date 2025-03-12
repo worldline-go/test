@@ -10,6 +10,7 @@ go get github.com/worldline-go/test
 | ------------------- | --------------------------------------------------- |
 | TEST_IMAGE_POSTGRES | docker.io/postgres:13.15-alpine                     |
 | TEST_IMAGE_REDIS    | docker.dragonflydb.io/dragonflydb/dragonfly:v1.27.1 |
+| TEST_IMAGE_KAFKA    | docker.io/bitnami/kafka:3.8.1					    |
 
 ## PostgreSQL
 
