@@ -37,7 +37,9 @@ func (db *Database) SetSchema(t *testing.T, schema string, opts ...OptionContext
 	t.Logf("set schema to %s", schema)
 
 	_, err := db.DB.ExecContext(opt.Ctx, "SET search_path TO "+schema)
-	t.Fatalf("could not set schema to %s: %v", schema, err)
+	if err != nil {
+		t.Fatalf("could not set schema to %s: %v", schema, err)
+	}
 }
 
 func (db *Database) CreateSchema(t *testing.T, schema string, opts ...OptionContext) {
@@ -48,7 +50,9 @@ func (db *Database) CreateSchema(t *testing.T, schema string, opts ...OptionCont
 	t.Logf("create schema %s", schema)
 
 	_, err := db.DB.ExecContext(opt.Ctx, "CREATE SCHEMA "+schema)
-	t.Fatalf("could not create schema %s: %v", schema, err)
+	if err != nil {
+		t.Fatalf("could not create schema %s: %v", schema, err)
+	}
 }
 
 func (db *Database) DropSchema(t *testing.T, schema string, opts ...OptionContext) {
@@ -59,7 +63,9 @@ func (db *Database) DropSchema(t *testing.T, schema string, opts ...OptionContex
 	t.Logf("drop schema %s", schema)
 
 	_, err := db.DB.ExecContext(opt.Ctx, "DROP SCHEMA IF EXISTS "+schema+" CASCADE")
-	t.Fatalf("could not drop schema %s: %v", schema, err)
+	if err != nil {
+		t.Fatalf("could not drop schema %s: %v", schema, err)
+	}
 }
 
 func (db *Database) ExecuteFolder(t *testing.T, folder string, opts ...OptionExec) {
