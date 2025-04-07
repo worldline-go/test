@@ -1,19 +1,19 @@
-package container_test
+package containerkafka_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/worldline-go/test/container"
+	container "github.com/worldline-go/test/container/containerkafka"
 )
 
 type KafkaSuite struct {
 	suite.Suite
-	container *container.KafkaContainer
+	container *container.Container
 }
 
 func (s *KafkaSuite) SetupSuite() {
-	s.container = container.Kafka(s.T())
+	s.container = container.New(s.T())
 }
 
 func TestExampleTestSuiteKafka(t *testing.T) {

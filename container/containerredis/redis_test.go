@@ -1,19 +1,20 @@
-package container_test
+package containerredis_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/worldline-go/test/container"
+	"github.com/worldline-go/test/container/containerredis"
+	container "github.com/worldline-go/test/container/containerredis"
 )
 
 type RedisSuite struct {
 	suite.Suite
-	container *container.RedisContainer
+	container *containerredis.Container
 }
 
 func (s *RedisSuite) SetupSuite() {
-	s.container = container.Redis(s.T())
+	s.container = container.New(s.T())
 }
 
 func TestExampleTestSuiteRedis(t *testing.T) {

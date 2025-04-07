@@ -1,4 +1,4 @@
-package container
+package containerredis
 
 import (
 	"net"
@@ -13,13 +13,13 @@ import (
 
 var DefaultRedisImage = "docker.dragonflydb.io/dragonflydb/dragonfly:v1.27.1"
 
-type RedisContainer struct {
+type Container struct {
 	container testcontainers.Container
 
 	address []string
 }
 
-func (p *RedisContainer) Stop(t *testing.T) {
+func (p *Container) Stop(t *testing.T) {
 	t.Helper()
 
 	if err := p.container.Terminate(t.Context()); err != nil {
@@ -27,7 +27,7 @@ func (p *RedisContainer) Stop(t *testing.T) {
 	}
 }
 
-func Redis(t *testing.T) *RedisContainer {
+func New(t *testing.T) *Container {
 	t.Helper()
 
 	image := DefaultRedisImage
@@ -77,12 +77,12 @@ func Redis(t *testing.T) *RedisContainer {
 
 	address := net.JoinHostPort(host, "6379")
 
-	return &RedisContainer{
+	return &Container{
 		container: container,
 		address:   []string{address},
 	}
 }
 
-func (p *RedisContainer) Address() []string {
+func (p *Container) Address() []string {
 	return p.address
 }

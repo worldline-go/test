@@ -1,4 +1,4 @@
-package container
+package containerpostgres
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ import (
 
 var DefaultPostgresImage = "docker.io/postgres:13.15-alpine"
 
-type PostgresContainer struct {
+type Container struct {
 	container testcontainers.Container
 	*testdb.Database
 
@@ -28,7 +28,7 @@ type PostgresContainer struct {
 	sqlx *sqlx.DB
 }
 
-func (p *PostgresContainer) Stop(t *testing.T) {
+func (p *Container) Stop(t *testing.T) {
 	t.Helper()
 
 	if err := p.container.Terminate(t.Context()); err != nil {
@@ -36,19 +36,19 @@ func (p *PostgresContainer) Stop(t *testing.T) {
 	}
 }
 
-func (p *PostgresContainer) Sqlx() *sqlx.DB {
+func (p *Container) Sqlx() *sqlx.DB {
 	return p.sqlx
 }
 
-func (p *PostgresContainer) Address() string {
+func (p *Container) Address() string {
 	return p.address
 }
 
-func (p *PostgresContainer) DSN() string {
+func (p *Container) DSN() string {
 	return p.dsn
 }
 
-func Postgres(t *testing.T) *PostgresContainer {
+func New(t *testing.T) *Container {
 	t.Helper()
 
 	addr := os.Getenv("POSTGRES_HOST")
@@ -104,7 +104,7 @@ func Postgres(t *testing.T) *PostgresContainer {
 
 	t.Logf("postgres connected at %s", dsn)
 
-	return &PostgresContainer{
+	return &Container{
 		container: postgresContainer,
 		address:   addr,
 		dsn:       dsn,

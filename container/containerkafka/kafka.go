@@ -1,4 +1,4 @@
-package container
+package containerkafka
 
 import (
 	"net"
@@ -13,13 +13,13 @@ import (
 
 var DefaultKafkaImage = "docker.io/bitnami/kafka:3.8.1"
 
-type KafkaContainer struct {
+type Container struct {
 	container testcontainers.Container
 
 	address []string
 }
 
-func (p *KafkaContainer) Stop(t *testing.T) {
+func (p *Container) Stop(t *testing.T) {
 	t.Helper()
 
 	if err := p.container.Terminate(t.Context()); err != nil {
@@ -27,7 +27,7 @@ func (p *KafkaContainer) Stop(t *testing.T) {
 	}
 }
 
-func Kafka(t *testing.T) *KafkaContainer {
+func New(t *testing.T) *Container {
 	t.Helper()
 
 	image := DefaultKafkaImage
@@ -81,12 +81,12 @@ func Kafka(t *testing.T) *KafkaContainer {
 
 	address := net.JoinHostPort(host, "9092")
 
-	return &KafkaContainer{
+	return &Container{
 		container: container,
 		address:   []string{address},
 	}
 }
 
-func (p *KafkaContainer) Address() []string {
+func (p *Container) Address() []string {
 	return p.address
 }

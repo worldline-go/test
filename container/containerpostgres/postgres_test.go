@@ -1,20 +1,21 @@
-package container_test
+package containerpostgres_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/worldline-go/test/container"
+
+	"github.com/worldline-go/test/container/containerpostgres"
 )
 
 type PostgresSuite struct {
 	suite.Suite
-	container *container.PostgresContainer
+	container *containerpostgres.Container
 }
 
 func (s *PostgresSuite) SetupSuite() {
-	s.container = container.Postgres(s.T())
+	s.container = containerpostgres.New(s.T())
 }
 
 func TestExampleTestSuitePostgres(t *testing.T) {
