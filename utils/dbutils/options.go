@@ -1,4 +1,4 @@
-package testdb
+package dbutils
 
 import (
 	"context"

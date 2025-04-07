@@ -8,9 +8,9 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/worldline-go/test/utils/dbutils"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/worldline-go/test/testdb"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -20,7 +20,7 @@ var DefaultPostgresImage = "docker.io/postgres:13.15-alpine"
 
 type Container struct {
 	container testcontainers.Container
-	*testdb.Database
+	*dbutils.Database
 
 	address string
 	dsn     string
@@ -30,6 +30,12 @@ type Container struct {
 
 func (p *Container) Stop(t *testing.T) {
 	t.Helper()
+
+	if p.sqlx != nil {
+		if err := p.sqlx.Close(); err != nil {
+			t.Errorf("could not close sqlx connection: %v", err)
+		}
+	}
 
 	if err := p.container.Terminate(t.Context()); err != nil {
 		t.Fatalf("could not stop postgres container: %v", err)
@@ -109,8 +115,6 @@ func New(t *testing.T) *Container {
 		address:   addr,
 		dsn:       dsn,
 		sqlx:      dbSqlx,
-		Database: &testdb.Database{
-			DB: dbSqlx.DB,
-		},
+		Database:  dbutils.New(t, dbSqlx.DB),
 	}
 }

@@ -1,4 +1,4 @@
-package testdb
+package dbutils
 
 import (
 	"context"
@@ -17,7 +17,7 @@ type Database struct {
 	schemaCounter int32
 }
 
-func NewDatabase(t *testing.T, db *sql.DB) *Database {
+func New(t *testing.T, db *sql.DB) *Database {
 	return &Database{
 		DB: db,
 	}
