@@ -8,12 +8,11 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/worldline-go/test/utils/dbutils"
-
 	"github.com/jmoiron/sqlx"
-
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/worldline-go/test/utils/dbutils"
 )
 
 var DefaultPostgresImage = "docker.io/postgres:13.15-alpine"
@@ -37,8 +36,10 @@ func (p *Container) Stop(t *testing.T) {
 		}
 	}
 
-	if err := p.container.Terminate(t.Context()); err != nil {
-		t.Fatalf("could not stop postgres container: %v", err)
+	if p.container != nil {
+		if err := p.container.Terminate(t.Context()); err != nil {
+			t.Fatalf("could not stop postgres container: %v", err)
+		}
 	}
 }
 
