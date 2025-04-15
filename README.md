@@ -30,30 +30,28 @@ import (
 	"github.com/worldline-go/test/container/containerpostgres"
 )
 
-type PostgresSuite struct {
+type DatabaseSuite struct {
 	suite.Suite
 	container *containerpostgres.Container
 }
 
-func (s *PostgresSuite) SetupSuite() {
+func (s *DatabaseSuite) SetupSuite() {
 	s.container = containerpostgres.New(s.T())
 }
 
-func TestExampleTestSuite(t *testing.T) {
-	suite.Run(t, new(PostgresSuite))
+func TestDatabase(t *testing.T) {
+	suite.Run(t, new(DatabaseSuite))
 }
 
-func (s *PostgresSuite) TearDownSuite() {
+func (s *DatabaseSuite) TearDownSuite() {
 	s.container.Stop(s.T())
 }
 
-func (s *PostgresSuite) SetupTest() {
+func (s *DatabaseSuite) SetupTest() {
 	s.container.ExecuteFiles(s.T(), []string{"testdata/init.sql"})
 }
 
-func (s *PostgresSuite) TearDownTest() {
-	sql := "Drop schema if exists transaction cascade;"
-	_, err := s.container.Sqlx().Exec(sql)
-	require.NoError(s.T(), err)
+func (s *DatabaseSuite) TestAddEvents() {
+	// Test event
 }
 ```
