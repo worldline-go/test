@@ -16,8 +16,6 @@ go get github.com/worldline-go/test
 
 Need to have a running PostgreSQL database to run the tests. To do that run it in the package level test main function.
 
-Our test package has `Main` function it will run the given function and accept a defer function for cleanup.
-
 ```go
 package container_test
 

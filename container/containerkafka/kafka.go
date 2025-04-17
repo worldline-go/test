@@ -102,10 +102,7 @@ func New(t *testing.T) *Container {
 		kafkaContainer = container
 	}
 
-	kafka, err := kafkautils.New(t, wkafka.Config{Brokers: addr})
-	if err != nil {
-		t.Fatalf("could not create Kafka client: %v", err)
-	}
+	kafka := kafkautils.New(t, wkafka.Config{Brokers: addr})
 
 	return &Container{
 		container: kafkaContainer,
