@@ -9,9 +9,9 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.37.0
-	github.com/twmb/franz-go v1.19.4
+	github.com/twmb/franz-go v1.19.5
 	github.com/twmb/franz-go/pkg/kadm v1.16.0
-	github.com/worldline-go/wkafka v0.5.0
+	github.com/worldline-go/wkafka v0.5.1
 )
 
 require (
