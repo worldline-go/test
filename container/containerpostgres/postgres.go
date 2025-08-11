@@ -99,7 +99,7 @@ func New(t *testing.T) *Container {
 		postgresContainer = container
 	}
 
-	dsn := fmt.Sprintf("postgres://postgres:postgres@%s/postgres", addr)
+	dsn := fmt.Sprintf("postgres://postgres@%s/postgres", addr)
 
 	t.Logf("postgres host: %s", addr)
 	t.Logf("postgres dsn: %s", dsn)
