@@ -5,7 +5,6 @@ import (
 	"net"
 	"os"
 	"testing"
-	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -15,7 +14,7 @@ import (
 	"github.com/worldline-go/test/utils/dbutils"
 )
 
-var DefaultPostgresImage = "docker.io/postgres:13.15-alpine"
+var DefaultPostgresImage = "docker.io/postgres:14.19-alpine"
 
 type Container struct {
 	container testcontainers.Container
@@ -73,7 +72,7 @@ func New(t *testing.T) *Container {
 			Env: map[string]string{
 				"POSTGRES_HOST_AUTH_METHOD": "trust",
 			},
-			WaitingFor: wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(5 * time.Second),
+			WaitingFor: wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		}
 		container, err := testcontainers.GenericContainer(t.Context(), testcontainers.GenericContainerRequest{
 			ContainerRequest: req,
