@@ -1,7 +1,9 @@
 package kafkautils
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/twmb/franz-go/pkg/kadm"
@@ -13,6 +15,10 @@ type Kafka struct {
 	Client *wkafka.Client
 	Admin  *kadm.Client
 	Config wkafka.Config
+}
+
+type KafkaTest struct {
+	*Kafka
 }
 
 type Topic struct {
@@ -50,9 +56,7 @@ func (p *ModifiedTopicPartitioner) PartitionByBackup(r *kgo.Record, n int, backu
 	return int(r.Partition)
 }
 
-func New(t *testing.T, cfg wkafka.Config, opts ...Option) *Kafka {
-	t.Helper()
-
+func New(ctx context.Context, cfg wkafka.Config, opts ...Option) (*Kafka, error) {
 	partitoner := ModifiedPartitioner{kgo.UniformBytesPartitioner(64<<10, true, true, nil)}
 
 	o := option{
@@ -69,40 +73,94 @@ func New(t *testing.T, cfg wkafka.Config, opts ...Option) *Kafka {
 
 	o.apply(opts...)
 
-	client, err := wkafka.New(t.Context(), cfg, o.WkafkaOpts...)
+	client, err := wkafka.New(ctx, cfg, o.WkafkaOpts...)
 	if err != nil {
-		t.Fatal("failed to create Kafka client:", err)
+		return nil, fmt.Errorf("failed to create Kafka client: %w", err)
 	}
 
 	return &Kafka{
 		Client: client,
 		Admin:  kadm.NewClient(client.Kafka),
 		Config: cfg,
+	}, nil
+}
+
+func NewTest(t *testing.T, cfg wkafka.Config, opts ...Option) *KafkaTest {
+	t.Helper()
+
+	k, err := New(t.Context(), cfg, opts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return &KafkaTest{
+		Kafka: k,
 	}
 }
 
 // ///////////////////////////////////////////////////////////////////
 
-func (k *Kafka) DeleteGroups(t *testing.T, groups ...string) {
-	t.Helper()
-	_, err := k.Admin.DeleteGroups(t.Context(), groups...)
-
-	if err != nil {
-		t.Fatal("failed to delete groups:", err)
+func (k *KafkaTest) DeleteGroups(t *testing.T, groups ...string) {
+	if err := k.Kafka.deleteGroups(t, t.Context(), groups...); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func (k *Kafka) DeleteTopics(t *testing.T, topics ...string) {
-	t.Helper()
-	_, err := k.Admin.DeleteTopics(t.Context(), topics...)
+func (k *Kafka) DeleteGroups(ctx context.Context, groups ...string) error {
+	return k.deleteGroups(nil, ctx, groups...)
+}
 
-	if err != nil {
-		t.Fatal("failed to delete topics:", err)
+func (k *Kafka) deleteGroups(t *testing.T, ctx context.Context, groups ...string) error {
+	if t != nil {
+		t.Helper()
+	}
+
+	if _, err := k.Admin.DeleteGroups(ctx, groups...); err != nil {
+		return fmt.Errorf("failed to delete groups: %w", err)
+	}
+
+	return nil
+}
+
+func (k *KafkaTest) DeleteTopics(t *testing.T, topics ...string) {
+	if err := k.Kafka.deleteTopics(t, t.Context(), topics...); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func (k *Kafka) CreateTopics(t *testing.T, topics ...Topic) []kadm.CreateTopicResponse {
-	t.Helper()
+func (k *Kafka) DeleteTopics(ctx context.Context, topics ...string) error {
+	return k.deleteTopics(nil, ctx, topics...)
+}
+
+func (k *Kafka) deleteTopics(t *testing.T, ctx context.Context, topics ...string) error {
+	if t != nil {
+		t.Helper()
+	}
+
+	if _, err := k.Admin.DeleteTopics(ctx, topics...); err != nil {
+		return fmt.Errorf("failed to delete topics: %w", err)
+	}
+
+	return nil
+}
+
+func (k *KafkaTest) CreateTopics(t *testing.T, topics ...Topic) []kadm.CreateTopicResponse {
+	responses, err := k.Kafka.createTopics(t, t.Context(), topics...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return responses
+}
+
+func (k *Kafka) CreateTopics(ctx context.Context, topics ...Topic) ([]kadm.CreateTopicResponse, error) {
+	return k.createTopics(nil, ctx, topics...)
+}
+
+func (k *Kafka) createTopics(t *testing.T, ctx context.Context, topics ...Topic) ([]kadm.CreateTopicResponse, error) {
+	if t != nil {
+		t.Helper()
+	}
 
 	responses := make([]kadm.CreateTopicResponse, 0, len(topics))
 	for _, topic := range topics {
@@ -116,23 +174,39 @@ func (k *Kafka) CreateTopics(t *testing.T, topics ...Topic) []kadm.CreateTopicRe
 			replicationFactor = -1
 		}
 
-		response, err := k.Admin.CreateTopic(t.Context(), partitions, replicationFactor, nil, topic.Name)
+		response, err := k.Admin.CreateTopic(ctx, partitions, replicationFactor, nil, topic.Name)
 		if err != nil {
-			t.Fatal("failed to create topic:", err)
+			return nil, fmt.Errorf("failed to create topic %s: %w", topic.Name, err)
 		}
 
 		responses = append(responses, response)
 	}
 
-	return responses
+	return responses, nil
 }
 
 // Publish publishes messages to the specified topic.
 //   - If the message is a byte slice, it will be sent as is.
 //   - If the message is any other type, it will be marshaled to JSON.
 //   - If the message is a wkafka.Record, than parition field is used, set to -1 to use the round robin batch partitioner.
-func (k *Kafka) Publish(t *testing.T, topic string, messages ...any) {
-	t.Helper()
+func (k *KafkaTest) Publish(t *testing.T, topic string, messages ...any) {
+	if err := k.Kafka.publish(t, t.Context(), topic, messages...); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Publish publishes messages to the specified topic.
+//   - If the message is a byte slice, it will be sent as is.
+//   - If the message is any other type, it will be marshaled to JSON.
+//   - If the message is a wkafka.Record, than parition field is used, set to -1 to use the round robin batch partitioner.
+func (k *Kafka) Publish(ctx context.Context, topic string, messages ...any) error {
+	return k.publish(nil, ctx, topic, messages...)
+}
+
+func (k *Kafka) publish(t *testing.T, ctx context.Context, topic string, messages ...any) error {
+	if t != nil {
+		t.Helper()
+	}
 
 	records := make([]*wkafka.Record, 0, len(messages))
 	headers := []wkafka.Header{
@@ -155,7 +229,7 @@ func (k *Kafka) Publish(t *testing.T, topic string, messages ...any) {
 			// Convert the message to a byte slice
 			jsonData, err := json.Marshal(v)
 			if err != nil {
-				t.Fatal("failed to marshal message:", err)
+				return fmt.Errorf("failed to marshal message: %w", err)
 			}
 
 			records = append(records, &wkafka.Record{Topic: topic, Value: jsonData, Headers: headers, Partition: -1})
@@ -163,7 +237,9 @@ func (k *Kafka) Publish(t *testing.T, topic string, messages ...any) {
 	}
 
 	// Produce the records to Kafka
-	if err := k.Client.ProduceRaw(t.Context(), records); err != nil {
-		t.Fatal("failed to produce messages:", err)
+	if err := k.Client.ProduceRaw(ctx, records); err != nil {
+		return fmt.Errorf("failed to produce messages: %w", err)
 	}
+
+	return nil
 }

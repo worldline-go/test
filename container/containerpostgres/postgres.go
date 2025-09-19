@@ -18,7 +18,7 @@ var DefaultPostgresImage = "docker.io/postgres:14.19-alpine"
 
 type Container struct {
 	container testcontainers.Container
-	*dbutils.Database
+	*dbutils.DatabaseTest
 
 	address string
 	dsn     string
@@ -111,10 +111,10 @@ func New(t *testing.T) *Container {
 	t.Logf("postgres connected at %s", dsn)
 
 	return &Container{
-		container: postgresContainer,
-		address:   addr,
-		dsn:       dsn,
-		sqlx:      dbSqlx,
-		Database:  dbutils.New(t, dbSqlx.DB),
+		container:    postgresContainer,
+		address:      addr,
+		dsn:          dsn,
+		sqlx:         dbSqlx,
+		DatabaseTest: dbutils.NewTest(t, dbSqlx.DB),
 	}
 }

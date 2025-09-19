@@ -19,7 +19,7 @@ var DefaultKafkaImage = "docker.io/bitnami/kafka:3.8.1"
 
 type Container struct {
 	container testcontainers.Container
-	*kafkautils.Kafka
+	*kafkautils.KafkaTest
 
 	address []string
 }
@@ -27,8 +27,8 @@ type Container struct {
 func (p *Container) Stop(t *testing.T) {
 	t.Helper()
 
-	if p.Kafka != nil && p.Kafka.Client != nil {
-		p.Kafka.Client.Close()
+	if p.KafkaTest != nil && p.KafkaTest.Client != nil {
+		p.KafkaTest.Client.Close()
 	}
 
 	if p.container != nil {
@@ -102,12 +102,12 @@ func New(t *testing.T) *Container {
 		kafkaContainer = container
 	}
 
-	kafka := kafkautils.New(t, wkafka.Config{Brokers: addr})
+	kafka := kafkautils.NewTest(t, wkafka.Config{Brokers: addr})
 
 	return &Container{
 		container: kafkaContainer,
 		address:   addr,
-		Kafka:     kafka,
+		KafkaTest: kafka,
 	}
 }
 
