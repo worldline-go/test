@@ -15,7 +15,7 @@ import (
 	"github.com/worldline-go/wkafka"
 )
 
-var DefaultKafkaImage = "docker.io/bitnami/kafka:3.8.1"
+var DefaultKafkaImage = "docker.io/bitnamilegacy/kafka:3.8.1"
 
 type Container struct {
 	container testcontainers.Container
