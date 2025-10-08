@@ -1,14 +1,15 @@
 package containerpostgres
 
 import (
-	"fmt"
-	"net"
+	"context"
+	"github.com/testcontainers/testcontainers-go"
 	"os"
 	"testing"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
-	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/worldline-go/test/utils/dbutils"
@@ -17,7 +18,7 @@ import (
 var DefaultPostgresImage = "docker.io/postgres:14.19-alpine"
 
 type Container struct {
-	container testcontainers.Container
+	container *postgres.PostgresContainer
 	*dbutils.DatabaseTest
 
 	address string
@@ -58,63 +59,71 @@ func New(t *testing.T) *Container {
 	t.Helper()
 
 	addr := os.Getenv("POSTGRES_HOST")
-	var postgresContainer testcontainers.Container
 
-	if addr == "" {
-		image := DefaultPostgresImage
-		if v := os.Getenv("TEST_IMAGE_POSTGRES"); v != "" {
-			image = v
-		}
-
-		req := testcontainers.ContainerRequest{
-			Image:        image,
-			ExposedPorts: []string{"5432/tcp"},
-			Env: map[string]string{
-				"POSTGRES_HOST_AUTH_METHOD": "trust",
-			},
-			WaitingFor: wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
-		}
-		container, err := testcontainers.GenericContainer(t.Context(), testcontainers.GenericContainerRequest{
-			ContainerRequest: req,
-			Started:          true,
-		})
-
-		if container == nil {
-			t.Fatalf("could not create postgres container: %v", err)
-		}
-
-		port, err := container.MappedPort(t.Context(), "5432")
-		if err != nil {
-			t.Fatalf("could not get mapped port: %v", err)
-		}
-
-		host, err := container.Host(t.Context())
-		if err != nil {
-			t.Fatalf("could not get host: %v", err)
-		}
-
-		addr = net.JoinHostPort(host, port.Port())
-
-		postgresContainer = container
+	image := DefaultPostgresImage
+	if v := os.Getenv("TEST_IMAGE_POSTGRES"); v != "" {
+		image = v
 	}
 
-	dsn := fmt.Sprintf("postgres://postgres@%s/postgres", addr)
+	// Create Postgres container
+	postgresContainer, err := postgres.Run(t.Context(),
+		image,
+		postgres.WithDatabase("testdb"),
+		postgres.WithUsername("postgres"),
+		postgres.WithPassword("postgres"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).
+				WithStartupTimeout(time.Second*5)),
+	)
 
-	t.Logf("postgres host: %s", addr)
-	t.Logf("postgres dsn: %s", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(postgresContainer *postgres.PostgresContainer, ctx context.Context) {
+		err := postgresContainer.Terminate(ctx)
+		if err != nil {
+			t.Fatalf("could not terminate container: %v", err)
+		}
+	}(postgresContainer, t.Context())
 
-	dbSqlx, err := sqlx.ConnectContext(t.Context(), "pgx", dsn)
+	// Get connection string
+	connStr, err := postgresContainer.ConnectionString(t.Context(), "sslmode=disable")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Connect to database
+	dbSqlx, err := sqlx.ConnectContext(t.Context(), "pgx", connStr)
 	if err != nil {
 		t.Fatalf("could not connect to postgres: %v", err)
 	}
+	defer func(dbSqlx *sqlx.DB) {
+		err := dbSqlx.Close()
+		if err != nil {
+			t.Fatalf("could not close db connection: %v", err)
+		}
+	}(dbSqlx)
 
-	t.Logf("postgres connected at %s", dsn)
+	// Test connection
+	if err := dbSqlx.Ping(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("postgres connection string: %s", connStr)
 
 	return &Container{
 		container:    postgresContainer,
 		address:      addr,
-		dsn:          dsn,
 		sqlx:         dbSqlx,
 		DatabaseTest: dbutils.NewTest(t, dbSqlx.DB),
 	}
+}
+
+func (p *Container) CreateSnapshot(ctx context.Context) error {
+	return p.container.Snapshot(ctx)
+}
+
+func (p *Container) RestoreSnapshot(ctx context.Context) error {
+	return p.container.Restore(ctx)
 }
