@@ -15,7 +15,7 @@ type PostgresSuite struct {
 }
 
 func (s *PostgresSuite) SetupSuite() {
-	s.container = containerpostgres.New(s.T())
+	s.container = containerpostgres.New(s.T(), "")
 }
 
 func TestExampleTestSuitePostgres(t *testing.T) {

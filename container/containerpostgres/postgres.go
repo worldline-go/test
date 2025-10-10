@@ -55,14 +55,18 @@ func (p *Container) DSN() string {
 	return p.dsn
 }
 
-func New(t *testing.T) *Container {
+func New(t *testing.T, port string) *Container {
 	t.Helper()
 
-	addr := os.Getenv("POSTGRES_HOST")
+	//addr := os.Getenv("POSTGRES_HOST")
 
 	image := DefaultPostgresImage
 	if v := os.Getenv("TEST_IMAGE_POSTGRES"); v != "" {
 		image = v
+	}
+
+	if port == "" {
+		port = "5432/tcp"
 	}
 
 	// Create Postgres container
@@ -75,17 +79,11 @@ func New(t *testing.T) *Container {
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
 				WithStartupTimeout(time.Second*5)),
+		testcontainers.WithExposedPorts(port),
 	)
-
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func(postgresContainer *postgres.PostgresContainer, ctx context.Context) {
-		err := postgresContainer.Terminate(ctx)
-		if err != nil {
-			t.Fatalf("could not terminate container: %v", err)
-		}
-	}(postgresContainer, t.Context())
 
 	// Get connection string
 	connStr, err := postgresContainer.ConnectionString(t.Context(), "sslmode=disable")
@@ -98,12 +96,6 @@ func New(t *testing.T) *Container {
 	if err != nil {
 		t.Fatalf("could not connect to postgres: %v", err)
 	}
-	defer func(dbSqlx *sqlx.DB) {
-		err := dbSqlx.Close()
-		if err != nil {
-			t.Fatalf("could not close db connection: %v", err)
-		}
-	}(dbSqlx)
 
 	// Test connection
 	if err := dbSqlx.Ping(); err != nil {
@@ -114,7 +106,7 @@ func New(t *testing.T) *Container {
 
 	return &Container{
 		container:    postgresContainer,
-		address:      addr,
+		address:      connStr,
 		sqlx:         dbSqlx,
 		DatabaseTest: dbutils.NewTest(t, dbSqlx.DB),
 	}
