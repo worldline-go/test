@@ -65,22 +65,37 @@ func New(t *testing.T, port string) *Container {
 		image = v
 	}
 
-	if port == "" {
-		port = "5432/tcp"
-	}
-
-	// Create Postgres container
-	postgresContainer, err := postgres.Run(t.Context(),
-		image,
-		postgres.WithDatabase("testdb"),
-		postgres.WithUsername("postgres"),
-		postgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(time.Second*5)),
-		testcontainers.WithExposedPorts(port),
+	var (
+		postgresContainer *postgres.PostgresContainer
+		err               error
 	)
+
+	if port != "" {
+		// Create Postgres container
+		postgresContainer, err = postgres.Run(t.Context(),
+			image,
+			postgres.WithDatabase("testdb"),
+			postgres.WithUsername("postgres"),
+			postgres.WithPassword("postgres"),
+			testcontainers.WithWaitStrategy(
+				wait.ForLog("database system is ready to accept connections").
+					WithOccurrence(2).
+					WithStartupTimeout(time.Second*5)),
+			testcontainers.WithExposedPorts(port),
+		)
+	} else {
+		// Create Postgres container
+		postgresContainer, err = postgres.Run(t.Context(),
+			image,
+			postgres.WithDatabase("testdb"),
+			postgres.WithUsername("postgres"),
+			postgres.WithPassword("postgres"),
+			testcontainers.WithWaitStrategy(
+				wait.ForLog("database system is ready to accept connections").
+					WithOccurrence(2).
+					WithStartupTimeout(time.Second*5)),
+		)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
