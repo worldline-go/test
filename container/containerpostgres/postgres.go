@@ -80,7 +80,7 @@ func New(t *testing.T, port ...int) *Container {
 				wait.ForLog("database system is ready to accept connections").
 					WithOccurrence(2).
 					WithStartupTimeout(time.Second*5)),
-			testcontainers.WithExposedPorts(strconv.Itoa(port[0])),
+			testcontainers.WithExposedPorts(strconv.Itoa(port[0])+"/tcp"),
 		)
 	} else {
 		// Create Postgres container
