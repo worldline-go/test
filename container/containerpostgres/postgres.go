@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/testcontainers/testcontainers-go"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -55,10 +56,8 @@ func (p *Container) DSN() string {
 	return p.dsn
 }
 
-func New(t *testing.T, port string) *Container {
+func New(t *testing.T, port ...int) *Container {
 	t.Helper()
-
-	//addr := os.Getenv("POSTGRES_HOST")
 
 	image := DefaultPostgresImage
 	if v := os.Getenv("TEST_IMAGE_POSTGRES"); v != "" {
@@ -70,7 +69,7 @@ func New(t *testing.T, port string) *Container {
 		err               error
 	)
 
-	if port != "" {
+	if port != nil && len(port) > 0 && port[0] > 0 {
 		// Create Postgres container
 		postgresContainer, err = postgres.Run(t.Context(),
 			image,
@@ -81,7 +80,7 @@ func New(t *testing.T, port string) *Container {
 				wait.ForLog("database system is ready to accept connections").
 					WithOccurrence(2).
 					WithStartupTimeout(time.Second*5)),
-			testcontainers.WithExposedPorts(port),
+			testcontainers.WithExposedPorts(strconv.Itoa(port[0])),
 		)
 	} else {
 		// Create Postgres container
@@ -110,11 +109,6 @@ func New(t *testing.T, port string) *Container {
 	dbSqlx, err := sqlx.ConnectContext(t.Context(), "pgx", connStr)
 	if err != nil {
 		t.Fatalf("could not connect to postgres: %v", err)
-	}
-
-	// Test connection
-	if err := dbSqlx.Ping(); err != nil {
-		t.Fatal(err)
 	}
 
 	t.Logf("postgres connection string: %s", connStr)
