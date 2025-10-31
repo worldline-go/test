@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/testcontainers/testcontainers-go"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -56,7 +55,7 @@ func (p *Container) DSN() string {
 	return p.dsn
 }
 
-func New(t *testing.T, port ...int) *Container {
+func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
 	t.Helper()
 
 	image := DefaultPostgresImage
@@ -64,37 +63,22 @@ func New(t *testing.T, port ...int) *Container {
 		image = v
 	}
 
-	var (
-		postgresContainer *postgres.PostgresContainer
-		err               error
-	)
-
-	if port != nil && len(port) > 0 && port[0] > 0 {
-		// Create Postgres container
-		postgresContainer, err = postgres.Run(t.Context(),
-			image,
-			postgres.WithDatabase("testdb"),
-			postgres.WithUsername("postgres"),
-			postgres.WithPassword("postgres"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(time.Second*5)),
-			testcontainers.WithExposedPorts(strconv.Itoa(port[0])+"/tcp"),
-		)
-	} else {
-		// Create Postgres container
-		postgresContainer, err = postgres.Run(t.Context(),
-			image,
-			postgres.WithDatabase("testdb"),
-			postgres.WithUsername("postgres"),
-			postgres.WithPassword("postgres"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(time.Second*5)),
-		)
+	// Create options slice with defaults
+	defaultOpts := []testcontainers.ContainerCustomizer{
+		postgres.WithDatabase("testdb"),
+		postgres.WithUsername("postgres"),
+		postgres.WithPassword("postgres"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).
+				WithStartupTimeout(time.Second * 5)),
 	}
+
+	// Merge custom options with defaults
+	allOpts := append(defaultOpts, opts...)
+
+	// Run with merged options
+	postgresContainer, err := postgres.Run(t.Context(), image, allOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
