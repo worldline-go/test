@@ -2,10 +2,10 @@ package containerpostgres
 
 import (
 	"context"
-	"github.com/testcontainers/testcontainers-go"
 	"os"
 	"testing"
-	"time"
+
+	"github.com/testcontainers/testcontainers-go"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -66,12 +66,10 @@ func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
 	// Create options slice with defaults
 	defaultOpts := []testcontainers.ContainerCustomizer{
 		postgres.WithDatabase("testdb"),
-		postgres.WithUsername("postgres"),
-		postgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(time.Second * 5)),
+		testcontainers.WithEnv(map[string]string{
+			"POSTGRES_HOST_AUTH_METHOD": "trust",
+		}),
+		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2)),
 	}
 
 	// Merge custom options with defaults
@@ -84,10 +82,18 @@ func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
 	}
 
 	// Get connection string
-	connStr, err := postgresContainer.ConnectionString(t.Context(), "sslmode=disable")
+	addr, err := postgresContainer.PortEndpoint(t.Context(), "5432/tcp", "")
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	connStr, err := postgresContainer.ConnectionString(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("postgres host: %s", addr)
+	t.Logf("postgres dsn: %s", connStr)
 
 	// Connect to database
 	dbSqlx, err := sqlx.ConnectContext(t.Context(), "pgx", connStr)
@@ -95,11 +101,10 @@ func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
 		t.Fatalf("could not connect to postgres: %v", err)
 	}
 
-	t.Logf("postgres connection string: %s", connStr)
-
 	return &Container{
 		container:    postgresContainer,
-		address:      connStr,
+		address:      addr,
+		dsn:          connStr,
 		sqlx:         dbSqlx,
 		DatabaseTest: dbutils.NewTest(t, dbSqlx.DB),
 	}
