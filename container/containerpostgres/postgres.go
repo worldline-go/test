@@ -69,6 +69,7 @@ func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
 		testcontainers.WithEnv(map[string]string{
 			"POSTGRES_HOST_AUTH_METHOD": "trust",
 		}),
+		postgres.WithSQLDriver("pgx"),
 		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2)),
 	}
 
