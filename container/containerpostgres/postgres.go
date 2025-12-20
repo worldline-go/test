@@ -2,13 +2,13 @@ package containerpostgres
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"testing"
 
 	"github.com/testcontainers/testcontainers-go"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/jmoiron/sqlx"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -24,15 +24,15 @@ type Container struct {
 	address string
 	dsn     string
 
-	sqlx *sqlx.DB
+	sql *sql.DB
 }
 
 func (p *Container) Stop(t *testing.T) {
 	t.Helper()
 
-	if p.sqlx != nil {
-		if err := p.sqlx.Close(); err != nil {
-			t.Errorf("could not close sqlx connection: %v", err)
+	if p.sql != nil {
+		if err := p.sql.Close(); err != nil {
+			t.Errorf("could not close sql connection: %v", err)
 		}
 	}
 
@@ -43,8 +43,8 @@ func (p *Container) Stop(t *testing.T) {
 	}
 }
 
-func (p *Container) Sqlx() *sqlx.DB {
-	return p.sqlx
+func (p *Container) Sql() *sql.DB {
+	return p.sql
 }
 
 func (p *Container) Address() string {
@@ -97,17 +97,21 @@ func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
 	t.Logf("postgres dsn: %s", connStr)
 
 	// Connect to database
-	dbSqlx, err := sqlx.ConnectContext(t.Context(), "pgx", connStr)
+	dbSql, err := sql.Open("pgx", connStr)
 	if err != nil {
 		t.Fatalf("could not connect to postgres: %v", err)
+	}
+
+	if err := dbSql.PingContext(t.Context()); err != nil {
+		t.Fatalf("could not ping to postgres: %v", err)
 	}
 
 	return &Container{
 		container:    postgresContainer,
 		address:      addr,
 		dsn:          connStr,
-		sqlx:         dbSqlx,
-		DatabaseTest: dbutils.NewTest(t, dbSqlx.DB),
+		sql:          dbSql,
+		DatabaseTest: dbutils.NewTest(t, dbSql),
 	}
 }
 

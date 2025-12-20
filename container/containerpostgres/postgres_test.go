@@ -32,6 +32,6 @@ func (s *PostgresSuite) SetupTest() {
 
 func (s *PostgresSuite) TearDownTest() {
 	sql := "Drop schema if exists transaction cascade;"
-	_, err := s.container.Sqlx().Exec(sql)
+	_, err := s.container.Sql().Exec(sql)
 	require.NoError(s.T(), err)
 }
