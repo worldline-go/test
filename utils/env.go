@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"net/url"
 	"os"
 	"strings"
 )
@@ -24,4 +25,24 @@ func EnvToLabels() map[string]string {
 	}
 
 	return labels
+}
+
+// DockerHost returns the IP/hostname to use for Kafka's advertised listeners.
+// It mirrors testcontainers' own host resolution so the advertised address
+// matches what container.Host() will return after startup.
+func DockerHost() string {
+	if v := os.Getenv("TESTCONTAINERS_HOST_OVERRIDE"); v != "" {
+		return v
+	}
+
+	dh := os.Getenv("DOCKER_HOST")
+	if dh == "" || strings.HasPrefix(dh, "unix://") || strings.HasPrefix(dh, "npipe://") {
+		return "localhost"
+	}
+
+	if u, err := url.Parse(dh); err == nil && u.Hostname() != "" {
+		return u.Hostname()
+	}
+
+	return "localhost"
 }

@@ -55,10 +55,7 @@ func New(t *testing.T) *Container {
 			image = v
 		}
 
-		announceIP := "localhost"
-		if v := os.Getenv("TESTCONTAINERS_HOST_OVERRIDE"); v != "" {
-			announceIP = v
-		}
+		announceIP := utils.DockerHost()
 
 		container, err := testcontainers.GenericContainer(t.Context(), testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
