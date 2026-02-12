@@ -11,6 +11,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/worldline-go/test/utils"
 	"github.com/worldline-go/test/utils/kafkautils"
 	"github.com/worldline-go/wkafka"
 )
@@ -84,6 +85,7 @@ func New(t *testing.T) *Container {
 						},
 					}
 				},
+				Labels: utils.EnvToLabels(),
 			},
 			Started:      true,
 			ProviderType: 0,

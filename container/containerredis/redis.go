@@ -9,6 +9,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/worldline-go/test/utils"
 )
 
 var DefaultRedisImage = "docker.dragonflydb.io/dragonflydb/dragonfly:v1.27.1"
@@ -61,6 +62,7 @@ func New(t *testing.T) *Container {
 					},
 				}
 			},
+			Labels: utils.EnvToLabels(),
 		},
 		Started:      true,
 		ProviderType: 0,

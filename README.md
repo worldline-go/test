@@ -7,10 +7,17 @@ go get github.com/worldline-go/test
 ```
 
 | Env                 | Default Image                                       |
-| ------------------- |-----------------------------------------------------|
+| ------------------- | --------------------------------------------------- |
 | TEST_IMAGE_POSTGRES | docker.io/postgres:13.15-alpine                     |
 | TEST_IMAGE_REDIS    | docker.dragonflydb.io/dragonflydb/dragonfly:v1.27.1 |
 | TEST_IMAGE_KAFKA    | docker.io/bitnamilegacy/kafka:3.8.1                 |
+
+For label to test containers start with `TEST_LABEL_` prefix, the rest of the env variable name will be used as label key. For example:
+
+| Env                      | Label Key     |
+| ------------------------ | ------------- |
+| TEST_LABEL_CI_JOB_ID     | ci.job.id     |
+| TEST_LABEL_CI_PROJECT_ID | ci.project.id |
 
 ## PostgreSQL
 

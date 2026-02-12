@@ -12,6 +12,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/worldline-go/test/utils"
 	"github.com/worldline-go/test/utils/dbutils"
 )
 
@@ -71,6 +72,7 @@ func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
 		}),
 		postgres.WithSQLDriver("pgx"),
 		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2)),
+		testcontainers.WithLabels(utils.EnvToLabels()),
 	}
 
 	// Merge custom options with defaults
