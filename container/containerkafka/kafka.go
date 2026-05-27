@@ -2,12 +2,13 @@ package containerkafka
 
 import (
 	"net"
+	"net/netip"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -73,14 +74,14 @@ func New(t *testing.T) *Container {
 				WaitingFor:   wait.ForLog("Kafka Server started"),
 				ExposedPorts: []string{"9092/tcp"},
 				HostConfigModifier: func(hostConfig *container.HostConfig) {
-					hostConfig.PortBindings = nat.PortMap{
-						"9092/tcp": []nat.PortBinding{
-							{
-								HostIP:   "0.0.0.0",
-								HostPort: "9092",
-							},
+			hostConfig.PortBindings = network.PortMap{
+					network.MustParsePort("9092/tcp"): []network.PortBinding{
+						{
+							HostIP:   netip.MustParseAddr("0.0.0.0"),
+							HostPort: "9092",
 						},
-					}
+					},
+				}
 				},
 				Labels: utils.EnvToLabels(),
 			},

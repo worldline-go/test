@@ -33,14 +33,19 @@ func apply[T any, O ~func(*T)](opts []O) *T {
 // funcs of optionExec
 
 type optionExec struct {
-	Values  map[string]string
-	Timeout time.Duration
-	Ctx     context.Context
+	Values     map[string]string
+	Timeout    time.Duration
+	Ctx        context.Context
+	SortFn     func(files []string)
+	Extensions []string
 }
 
 func (o *optionExec) Default() {
 	if o.Ctx == nil {
 		o.Ctx = context.Background()
+	}
+	if len(o.Extensions) == 0 {
+		o.Extensions = []string{".sql"}
 	}
 }
 
@@ -62,6 +67,22 @@ func WithTimeout(timeout time.Duration) OptionExec {
 func WithExecContext(ctx context.Context) OptionExec {
 	return func(o *optionExec) {
 		o.Ctx = ctx
+	}
+}
+
+// WithSort sets a custom sort function for files in ExecuteFolder.
+// By default, files are sorted numerically by the leading number in their filename.
+func WithSort(fn func(files []string)) OptionExec {
+	return func(o *optionExec) {
+		o.SortFn = fn
+	}
+}
+
+// WithExtensions filters files in ExecuteFolder to only include files with the given extensions.
+// Default is []string{".sql"}.
+func WithExtensions(exts ...string) OptionExec {
+	return func(o *optionExec) {
+		o.Extensions = exts
 	}
 }
 

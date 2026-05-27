@@ -2,11 +2,12 @@ package containerredis
 
 import (
 	"net"
+	"net/netip"
 	"os"
 	"testing"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/worldline-go/test/utils"
@@ -53,14 +54,14 @@ func New(t *testing.T) *Container {
 			WaitingFor:   wait.ForLog("listening on port 6379"),
 			ExposedPorts: []string{"6379/tcp"},
 			HostConfigModifier: func(hostConfig *container.HostConfig) {
-				hostConfig.PortBindings = nat.PortMap{
-					"6379/tcp": []nat.PortBinding{
-						{
-							HostIP:   "0.0.0.0",
-							HostPort: "6379",
-						},
+			hostConfig.PortBindings = network.PortMap{
+				network.MustParsePort("6379/tcp"): []network.PortBinding{
+					{
+						HostIP:   netip.MustParseAddr("0.0.0.0"),
+						HostPort: "6379",
 					},
-				}
+				},
+			}
 			},
 			Labels: utils.EnvToLabels(),
 		},

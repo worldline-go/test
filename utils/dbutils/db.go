@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 )
@@ -146,9 +148,16 @@ func (db *Database) ExecuteFolder(folder string, opts ...OptionExec) error {
 }
 
 func (db *Database) executeFolder(t *testing.T, folder string, opts ...OptionExec) error {
+	opt := apply(opts)
+
 	dirEntry, err := os.ReadDir(folder)
 	if err != nil {
 		return fmt.Errorf("could not read folder %s: %w", folder, err)
+	}
+
+	extSet := make(map[string]bool, len(opt.Extensions))
+	for _, ext := range opt.Extensions {
+		extSet[ext] = true
 	}
 
 	var files []string
@@ -157,7 +166,17 @@ func (db *Database) executeFolder(t *testing.T, folder string, opts ...OptionExe
 			continue
 		}
 
+		if !extSet[path.Ext(file.Name())] {
+			continue
+		}
+
 		files = append(files, path.Join(folder, file.Name()))
+	}
+
+	if opt.SortFn != nil {
+		opt.SortFn(files)
+	} else {
+		sortFilesNumerically(files)
 	}
 
 	return db.executeFiles(t, files, opts...)
@@ -211,4 +230,42 @@ func (db *Database) executeFiles(t *testing.T, files []string, opts ...OptionExe
 	}
 
 	return nil
+}
+
+// sortFilesNumerically sorts file paths by the leading numeric prefix in the filename.
+// Files without a numeric prefix are sorted after numbered files, in lexicographic order.
+func sortFilesNumerically(files []string) {
+	sort.Slice(files, func(i, j int) bool {
+		ni, _ := leadingNumber(path.Base(files[i]))
+		nj, _ := leadingNumber(path.Base(files[j]))
+
+		if ni != nj {
+			return ni < nj
+		}
+
+		return files[i] < files[j]
+	})
+}
+
+// leadingNumber extracts the leading integer from a filename (e.g. "10_foo.sql" -> 10).
+// Returns math.MaxInt if no leading number is found.
+func leadingNumber(name string) (int, bool) {
+	idx := strings.IndexFunc(name, func(r rune) bool {
+		return r < '0' || r > '9'
+	})
+
+	if idx == 0 || len(name) == 0 {
+		return 1<<31 - 1, false
+	}
+
+	if idx < 0 {
+		idx = len(name)
+	}
+
+	n, err := strconv.Atoi(name[:idx])
+	if err != nil {
+		return 1<<31 - 1, false
+	}
+
+	return n, true
 }
