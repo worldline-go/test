@@ -3,6 +3,7 @@ package containerpostgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"testing"
 
@@ -28,19 +29,27 @@ type Container struct {
 	sql *sql.DB
 }
 
-func (p *Container) Stop(t *testing.T) {
-	t.Helper()
-
+func (p *Container) StopWithCtx(ctx context.Context) error {
 	if p.sql != nil {
 		if err := p.sql.Close(); err != nil {
-			t.Errorf("could not close sql connection: %v", err)
+			return fmt.Errorf("could not close sql connection: %w", err)
 		}
 	}
 
 	if p.container != nil {
-		if err := p.container.Terminate(t.Context()); err != nil {
-			t.Fatalf("could not stop postgres container: %v", err)
+		if err := p.container.Terminate(ctx); err != nil {
+			return fmt.Errorf("could not stop postgres container: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (p *Container) Stop(t *testing.T) {
+	t.Helper()
+
+	if err := p.StopWithCtx(t.Context()); err != nil {
+		t.Fatalf("could not stop postgres container: %v", err)
 	}
 }
 
@@ -56,9 +65,7 @@ func (p *Container) DSN() string {
 	return p.dsn
 }
 
-func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
-	t.Helper()
-
+func NewWithCtx(ctx context.Context, opts ...testcontainers.ContainerCustomizer) (*Container, error) {
 	image := DefaultPostgresImage
 	if v := os.Getenv("TEST_IMAGE_POSTGRES"); v != "" {
 		image = v
@@ -79,33 +86,30 @@ func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
 	allOpts := append(defaultOpts, opts...)
 
 	// Run with merged options
-	postgresContainer, err := postgres.Run(t.Context(), image, allOpts...)
+	postgresContainer, err := postgres.Run(ctx, image, allOpts...)
 	if err != nil {
-		t.Fatal(err)
+		return nil, fmt.Errorf("could not create Postgres container: %w", err)
 	}
 
 	// Get connection string
-	addr, err := postgresContainer.PortEndpoint(t.Context(), "5432/tcp", "")
+	addr, err := postgresContainer.PortEndpoint(ctx, "5432/tcp", "")
 	if err != nil {
-		t.Fatal(err)
+		return nil, fmt.Errorf("could not get Postgres port endpoint: %w", err)
 	}
 
-	connStr, err := postgresContainer.ConnectionString(t.Context())
+	connStr, err := postgresContainer.ConnectionString(ctx)
 	if err != nil {
-		t.Fatal(err)
+		return nil, fmt.Errorf("could not get Postgres connection string: %w", err)
 	}
-
-	t.Logf("postgres host: %s", addr)
-	t.Logf("postgres dsn: %s", connStr)
 
 	// Connect to database
 	dbSql, err := sql.Open("pgx", connStr)
 	if err != nil {
-		t.Fatalf("could not connect to postgres: %v", err)
+		return nil, fmt.Errorf("could not connect to postgres: %w", err)
 	}
 
-	if err := dbSql.PingContext(t.Context()); err != nil {
-		t.Fatalf("could not ping to postgres: %v", err)
+	if err := dbSql.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("could not ping to postgres: %w", err)
 	}
 
 	return &Container{
@@ -113,8 +117,22 @@ func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
 		address:      addr,
 		dsn:          connStr,
 		sql:          dbSql,
-		DatabaseTest: dbutils.NewTest(t, dbSql),
+		DatabaseTest: &dbutils.DatabaseTest{DB: dbutils.New(dbSql)},
+	}, nil
+}
+
+func New(t *testing.T, opts ...testcontainers.ContainerCustomizer) *Container {
+	t.Helper()
+
+	postgresContainer, err := NewWithCtx(t.Context(), opts...)
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	t.Logf("postgres host: %s", postgresContainer.Address())
+	t.Logf("postgres dsn: %s", postgresContainer.DSN())
+
+	return postgresContainer
 }
 
 func (p *Container) CreateSnapshot(ctx context.Context) error {

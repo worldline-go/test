@@ -1,6 +1,8 @@
 package containerkafka
 
 import (
+	"context"
+	"fmt"
 	"net"
 	"net/netip"
 	"os"
@@ -26,23 +28,29 @@ type Container struct {
 	address []string
 }
 
-func (p *Container) Stop(t *testing.T) {
-	t.Helper()
-
+func (p *Container) StopWithCtx(ctx context.Context) error {
 	if p.KafkaTest != nil && p.KafkaTest.Client != nil {
 		p.KafkaTest.Client.Close()
 	}
 
 	if p.container != nil {
-		if err := p.container.Terminate(t.Context()); err != nil {
-			t.Fatalf("could not stop Kafka container: %v", err)
+		if err := p.container.Terminate(ctx); err != nil {
+			return err
 		}
+	}
+
+	return nil
+}
+
+func (p *Container) Stop(t *testing.T) {
+	t.Helper()
+
+	if err := p.StopWithCtx(t.Context()); err != nil {
+		t.Fatalf("could not stop Kafka container: %v", err)
 	}
 }
 
-func New(t *testing.T) *Container {
-	t.Helper()
-
+func NewWithCtx(ctx context.Context) (*Container, error) {
 	var kafkaContainer testcontainers.Container
 
 	var addr []string
@@ -58,7 +66,7 @@ func New(t *testing.T) *Container {
 
 		announceIP := utils.DockerHost()
 
-		container, err := testcontainers.GenericContainer(t.Context(), testcontainers.GenericContainerRequest{
+		container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
 				Image: image,
 				Env: map[string]string{
@@ -74,14 +82,14 @@ func New(t *testing.T) *Container {
 				WaitingFor:   wait.ForLog("Kafka Server started"),
 				ExposedPorts: []string{"9092/tcp"},
 				HostConfigModifier: func(hostConfig *container.HostConfig) {
-			hostConfig.PortBindings = network.PortMap{
-					network.MustParsePort("9092/tcp"): []network.PortBinding{
-						{
-							HostIP:   netip.MustParseAddr("0.0.0.0"),
-							HostPort: "9092",
+					hostConfig.PortBindings = network.PortMap{
+						network.MustParsePort("9092/tcp"): []network.PortBinding{
+							{
+								HostIP:   netip.MustParseAddr("0.0.0.0"),
+								HostPort: "9092",
+							},
 						},
-					},
-				}
+					}
 				},
 				Labels: utils.EnvToLabels(),
 			},
@@ -90,25 +98,43 @@ func New(t *testing.T) *Container {
 			Reuse:        false,
 		})
 		if err != nil {
-			t.Fatalf("could not create Kafka container: %v", err)
+			return nil, fmt.Errorf("could not create Kafka container: %w", err)
 		}
 
-		host, err := container.Host(t.Context())
+		host, err := container.Host(ctx)
 		if err != nil {
-			t.Fatalf("could not get host: %v", err)
+			return nil, fmt.Errorf("could not get host: %w", err)
 		}
 
 		addr = []string{net.JoinHostPort(host, "9092")}
 		kafkaContainer = container
 	}
 
-	kafka := kafkautils.NewTest(t, wkafka.Config{Brokers: addr})
+	kafka, err := kafkautils.New(ctx, wkafka.Config{Brokers: addr})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Kafka client: %w", err)
+	}
 
 	return &Container{
 		container: kafkaContainer,
 		address:   addr,
-		KafkaTest: kafka,
+		KafkaTest: &kafkautils.KafkaTest{
+			Kafka: kafka,
+		},
+	}, nil
+}
+
+func New(t *testing.T) *Container {
+	t.Helper()
+
+	kafkaContainer, err := NewWithCtx(t.Context())
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	t.Logf("kafka broker: %s", kafkaContainer.Address())
+
+	return kafkaContainer
 }
 
 func (p *Container) Address() []string {

@@ -1,6 +1,8 @@
 package containerredis
 
 import (
+	"context"
+	"fmt"
 	"net"
 	"net/netip"
 	"os"
@@ -21,17 +23,25 @@ type Container struct {
 	address []string
 }
 
+func (p *Container) StopWithCtx(ctx context.Context) error {
+	if p.container != nil {
+		if err := p.container.Terminate(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (p *Container) Stop(t *testing.T) {
 	t.Helper()
 
-	if err := p.container.Terminate(t.Context()); err != nil {
+	if err := p.StopWithCtx(t.Context()); err != nil {
 		t.Fatalf("could not stop redis container: %v", err)
 	}
 }
 
-func New(t *testing.T) *Container {
-	t.Helper()
-
+func NewWithCtx(ctx context.Context) (*Container, error) {
 	image := DefaultRedisImage
 	if v := os.Getenv("TEST_IMAGE_REDIS"); v != "" {
 		image = v
@@ -42,7 +52,7 @@ func New(t *testing.T) *Container {
 		announceIP = v
 	}
 
-	container, err := testcontainers.GenericContainer(t.Context(), testcontainers.GenericContainerRequest{
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: image,
 			Cmd: []string{
@@ -54,14 +64,14 @@ func New(t *testing.T) *Container {
 			WaitingFor:   wait.ForLog("listening on port 6379"),
 			ExposedPorts: []string{"6379/tcp"},
 			HostConfigModifier: func(hostConfig *container.HostConfig) {
-			hostConfig.PortBindings = network.PortMap{
-				network.MustParsePort("6379/tcp"): []network.PortBinding{
-					{
-						HostIP:   netip.MustParseAddr("0.0.0.0"),
-						HostPort: "6379",
+				hostConfig.PortBindings = network.PortMap{
+					network.MustParsePort("6379/tcp"): []network.PortBinding{
+						{
+							HostIP:   netip.MustParseAddr("0.0.0.0"),
+							HostPort: "6379",
+						},
 					},
-				},
-			}
+				}
 			},
 			Labels: utils.EnvToLabels(),
 		},
@@ -70,12 +80,12 @@ func New(t *testing.T) *Container {
 		Reuse:        false,
 	})
 	if err != nil {
-		t.Fatalf("could not create redis container: %v", err)
+		return nil, fmt.Errorf("could not create redis container: %w", err)
 	}
 
-	host, err := container.Host(t.Context())
+	host, err := container.Host(ctx)
 	if err != nil {
-		t.Fatalf("could not get host: %v", err)
+		return nil, fmt.Errorf("could not get host: %w", err)
 	}
 
 	address := net.JoinHostPort(host, "6379")
@@ -83,7 +93,20 @@ func New(t *testing.T) *Container {
 	return &Container{
 		container: container,
 		address:   []string{address},
+	}, nil
+}
+
+func New(t *testing.T) *Container {
+	t.Helper()
+
+	redisContainer, err := NewWithCtx(t.Context())
+	if err != nil {
+		t.Fatalf("could not create redis container: %v", err)
 	}
+
+	t.Logf("redis address: %s", redisContainer.Address())
+
+	return redisContainer
 }
 
 func (p *Container) Address() []string {

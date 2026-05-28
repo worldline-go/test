@@ -21,7 +21,7 @@ type Database struct {
 }
 
 type DatabaseTest struct {
-	db *Database
+	DB *Database
 }
 
 func New(db *sql.DB) *Database {
@@ -34,12 +34,12 @@ func NewTest(t *testing.T, db *sql.DB) *DatabaseTest {
 	t.Helper()
 
 	return &DatabaseTest{
-		db: New(db),
+		DB: New(db),
 	}
 }
 
 func (db *DatabaseTest) NameGen(prefix string) string {
-	return db.db.NameGen(prefix)
+	return db.DB.NameGen(prefix)
 }
 
 func (db *Database) NameGen(prefix string) string {
@@ -51,7 +51,7 @@ func (db *Database) NameGen(prefix string) string {
 func (db *DatabaseTest) SetSchema(t *testing.T, schema string, opts ...OptionContext) {
 	t.Helper()
 
-	if err := db.db.setSchema(t, schema, opts...); err != nil {
+	if err := db.DB.setSchema(t, schema, opts...); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -80,7 +80,7 @@ func (db *Database) setSchema(t *testing.T, schema string, opts ...OptionContext
 func (db *DatabaseTest) CreateSchema(t *testing.T, schema string, opts ...OptionContext) {
 	t.Helper()
 
-	if err := db.db.createSchema(t, schema, opts...); err != nil {
+	if err := db.DB.createSchema(t, schema, opts...); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -109,7 +109,7 @@ func (db *Database) createSchema(t *testing.T, schema string, opts ...OptionCont
 func (db *DatabaseTest) DropSchema(t *testing.T, schema string, opts ...OptionContext) {
 	t.Helper()
 
-	if err := db.db.dropSchema(t, schema, opts...); err != nil {
+	if err := db.DB.dropSchema(t, schema, opts...); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -138,7 +138,7 @@ func (db *Database) dropSchema(t *testing.T, schema string, opts ...OptionContex
 func (db *DatabaseTest) ExecuteFolder(t *testing.T, folder string, opts ...OptionExec) {
 	t.Helper()
 
-	if err := db.db.executeFolder(t, folder, opts...); err != nil {
+	if err := db.DB.executeFolder(t, folder, opts...); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -185,7 +185,7 @@ func (db *Database) executeFolder(t *testing.T, folder string, opts ...OptionExe
 func (db *DatabaseTest) ExecuteFiles(t *testing.T, files []string, opts ...OptionExec) {
 	t.Helper()
 
-	if err := db.db.executeFiles(t, files, opts...); err != nil {
+	if err := db.DB.executeFiles(t, files, opts...); err != nil {
 		t.Fatal(err)
 	}
 }
